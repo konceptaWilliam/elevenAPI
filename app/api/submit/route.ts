@@ -4,6 +4,19 @@ import nextEnv from "@next/env";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
+const TRYGGVE_VOICE_ID = "ZMs9a3j1SLzirC7aygJQ";
+const JOY_VOICE_ID = "4xkUqaR9MYOJHoaC1Nak"; // Replace with actual Joy voice ID when available
+
+function getVoiceId(tryggveOrJoy: string) {
+  if (tryggveOrJoy === "tryggve") {
+    return TRYGGVE_VOICE_ID;
+  } else if (tryggveOrJoy === "joy") {
+    return JOY_VOICE_ID;
+  } else {
+    throw new Error("Invalid voice selection");
+  }
+}
+
 const { loadEnvConfig } = nextEnv;
 
 export async function POST(request: Request) {
@@ -16,6 +29,7 @@ export async function POST(request: Request) {
     const files = await createAudioFileFromText(
       String(data.singleWords) === "true",
       data.userInput as string,
+      data.tryggveOrJoy as string,
     );
 
     return NextResponse.json(
@@ -61,9 +75,11 @@ type GeneratedAudioFile = {
 export async function createAudioFileFromText(
   singleWords: boolean,
   text: string,
+  tryggveOrJoy: string,
 ) {
   const generatedFiles: GeneratedAudioFile[] = [];
   const usedNames = new Set<string>();
+  const voiceId = getVoiceId(tryggveOrJoy);
 
   if (singleWords) {
     const words = text
@@ -72,39 +88,33 @@ export async function createAudioFileFromText(
       .filter(Boolean);
 
     for (const word of words) {
-      const audio = await elevenlabs.textToSpeech.convert(
-        "ZMs9a3j1SLzirC7aygJQ",
-        {
-          modelId: "eleven_v3",
-          text: word,
-          outputFormat: "mp3_44100_128",
-          voiceSettings: {
-            stability: 0,
-            similarityBoost: 0,
-            useSpeakerBoost: true,
-            speed: 1.0,
-          },
-        },
-      );
-
-      generatedFiles.push(await generateFile(word, audio, usedNames));
-    }
-  } else {
-    const audio = await elevenlabs.textToSpeech.convert(
-      "ZMs9a3j1SLzirC7aygJQ",
-      {
+      const audio = await elevenlabs.textToSpeech.convert(voiceId, {
         modelId: "eleven_v3",
-        text,
+        text: word,
         outputFormat: "mp3_44100_128",
-
         voiceSettings: {
           stability: 0,
           similarityBoost: 0,
           useSpeakerBoost: true,
           speed: 1.0,
         },
+      });
+
+      generatedFiles.push(await generateFile(word, audio, usedNames));
+    }
+  } else {
+    const audio = await elevenlabs.textToSpeech.convert(voiceId, {
+      modelId: "eleven_v3",
+      text,
+      outputFormat: "mp3_44100_128",
+
+      voiceSettings: {
+        stability: 0,
+        similarityBoost: 0,
+        useSpeakerBoost: true,
+        speed: 1.0,
       },
-    );
+    });
 
     generatedFiles.push(await generateFile(text, audio, usedNames));
   }
@@ -113,9 +123,13 @@ export async function createAudioFileFromText(
 }
 
 function sanitizeFileStem(text: string) {
+  // Replace å, ä, ö with a and o for filename only
   const stem = text
     .trim()
     .toLowerCase()
+    .replace(/å/g, "a")
+    .replace(/ä/g, "a")
+    .replace(/ö/g, "o")
     .replace(/\s+/g, "-")
     .replace(/[^a-zA-Z0-9-_]/g, "");
 
