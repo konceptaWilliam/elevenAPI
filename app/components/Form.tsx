@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import * as React from "react";
+import { toMp3FileName } from "@/lib/file-name";
 
 type GeneratedAudioFile = {
   fileName: string;
@@ -54,7 +55,10 @@ export default function Form() {
   const [selectedDirectoryName, setSelectedDirectoryName] = useState("");
 
   const [queue, setQueue] = useState<string[]>([]);
+  const [originalQueue, setOriginalQueue] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
+  const [currentWordDraft, setCurrentWordDraft] = useState("");
+  const [isEditingCurrentWord, setIsEditingCurrentWord] = useState(false);
   const [currentFile, setCurrentFile] = useState<GeneratedAudioFile | null>(
     null,
   );
@@ -69,6 +73,17 @@ export default function Form() {
       }
     };
   }, [currentAudioUrl]);
+
+  useEffect(() => {
+    if (currentIndex === null || !queue[currentIndex]) {
+      setCurrentWordDraft("");
+      setIsEditingCurrentWord(false);
+      return;
+    }
+
+    setCurrentWordDraft(queue[currentIndex]);
+    setIsEditingCurrentWord(false);
+  }, [currentIndex, queue]);
 
   async function chooseDirectory() {
     if (!("showDirectoryPicker" in window)) {
@@ -162,6 +177,7 @@ export default function Form() {
         return null;
       });
       setQueue([]);
+      setOriginalQueue([]);
       setSavedCount(nextSavedCount);
 
       const totalSkipped = skippedCount + (saveCurrent ? 0 : 1);
@@ -202,6 +218,7 @@ export default function Form() {
     }
 
     setQueue(items);
+    setOriginalQueue(items);
     setCurrentIndex(0);
     setCurrentFile(null);
     setSavedCount(0);
@@ -212,7 +229,7 @@ export default function Form() {
   }
 
   async function onApproveCurrent() {
-    if (!currentFile || isBusy) {
+    if (!currentFile || isBusy || currentIndex === null) {
       return;
     }
 
@@ -220,19 +237,28 @@ export default function Form() {
 
     try {
       const fileBytes = base64ToUint8Array(currentFile.base64Audio);
+      const originalPrompt = originalQueue[currentIndex] ?? queue[currentIndex];
+      const currentPrompt = queue[currentIndex];
+      let targetFileName = currentFile.fileName;
+
+      if (originalPrompt && currentPrompt && originalPrompt !== currentPrompt) {
+        const originalFileName = toMp3FileName(originalPrompt);
+        const editedFileName = toMp3FileName(currentPrompt);
+        const useOriginalFileName = window.confirm(
+          `Du har redigerat prompten.\n\nOK = spara som ${originalFileName}\nAvbryt = spara som ${editedFileName}`,
+        );
+        targetFileName = useOriginalFileName ? originalFileName : editedFileName;
+      }
 
       if (directoryHandle) {
-        const fileHandle = await directoryHandle.getFileHandle(
-          currentFile.fileName,
-          {
-            create: true,
-          },
-        );
+        const fileHandle = await directoryHandle.getFileHandle(targetFileName, {
+          create: true,
+        });
         const writable = await fileHandle.createWritable();
         await writable.write(fileBytes);
         await writable.close();
       } else {
-        downloadToDefaultLocation(currentFile.fileName, fileBytes);
+        downloadToDefaultLocation(targetFileName, fileBytes);
       }
 
       await goToNextItem(true);
@@ -247,7 +273,20 @@ export default function Form() {
       return;
     }
 
-    await generateForItem(queue[currentIndex]);
+    const nextWord = currentWordDraft.trim();
+    if (!nextWord) {
+      setResultMessage("Ordet kan inte vara tomt.");
+      return;
+    }
+
+    setQueue((previousQueue) => {
+      const updatedQueue = [...previousQueue];
+      updatedQueue[currentIndex] = nextWord;
+      return updatedQueue;
+    });
+    setIsEditingCurrentWord(false);
+
+    await generateForItem(nextWord);
   }
 
   async function onSkipCurrent() {
@@ -322,7 +361,33 @@ export default function Form() {
         <div className="flex flex-col gap-3 rounded p-3">
           <p className="text-sm">
             ({currentIndex + 1}/{queue.length}):{" "}
-            <strong>{queue[currentIndex]}</strong>
+            {isEditingCurrentWord ? (
+              <input
+                value={currentWordDraft}
+                onChange={(event) => setCurrentWordDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    setIsEditingCurrentWord(false);
+                  }
+                }}
+                onBlur={() => setIsEditingCurrentWord(false)}
+                className="rounded border border-black px-2 py-1"
+                autoFocus
+              />
+            ) : (
+              <span className="inline-flex items-center gap-2">
+                <strong>{currentWordDraft || queue[currentIndex]}</strong>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingCurrentWord(true)}
+                  aria-label="Redigera ord"
+                  className="text-base leading-none"
+                >
+                  🖊️
+                </button>
+              </span>
+            )}
           </p>
           {currentAudioUrl ? <audio controls src={currentAudioUrl} /> : null}
           <div className="flex gap-2">

@@ -3,6 +3,7 @@ import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import nextEnv from "@next/env";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
+import { sanitizeFileStem } from "@/lib/file-name";
 
 const TRYGGVE_VOICE_ID = "ZMs9a3j1SLzirC7aygJQ";
 const JOY_VOICE_ID = "4xkUqaR9MYOJHoaC1Nak"; // Replace with actual Joy voice ID when available
@@ -120,21 +121,6 @@ export async function createAudioFileFromText(
   }
 
   return generatedFiles;
-}
-
-function sanitizeFileStem(text: string) {
-  // Keep Unicode letters/numbers (including Swedish letters) in filenames.
-  const stem = text
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^\p{L}\p{N}_-]/gu, "");
-
-  if (!stem) {
-    return "audio";
-  }
-
-  return stem.slice(0, 64);
 }
 
 function buildUniqueFileName(stem: string, usedNames: Set<string>) {
