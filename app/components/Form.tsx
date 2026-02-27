@@ -30,7 +30,8 @@ function base64ToUint8Array(base64: string) {
 }
 
 function downloadToDefaultLocation(fileName: string, fileBytes: Uint8Array) {
-  const blob = new Blob([fileBytes], { type: "audio/mpeg" });
+  const blobBytes = new Uint8Array(fileBytes);
+  const blob = new Blob([blobBytes.buffer], { type: "audio/mpeg" });
   const downloadUrl = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = downloadUrl;
@@ -126,7 +127,8 @@ export default function Form() {
     try {
       const file = await fetchSingleAudio(text);
       const fileBytes = base64ToUint8Array(file.base64Audio);
-      const blob = new Blob([fileBytes], { type: "audio/mpeg" });
+      const blobBytes = new Uint8Array(fileBytes);
+      const blob = new Blob([blobBytes.buffer], { type: "audio/mpeg" });
       const previewUrl = URL.createObjectURL(blob);
 
       setCurrentAudioUrl((previousUrl) => {
