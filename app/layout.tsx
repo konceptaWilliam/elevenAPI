@@ -19,8 +19,10 @@ export default async function RootLayout({
   if (!session) {
     return (
       <html lang="en">
-        <body>
-          <h1>Not signed in</h1>
+        <body className="flex flex-col justify-center items-center h-screen">
+          <h1 className="text-3xl font-extrabold">
+            Tryggve och Joys Röstverkstad
+          </h1>
           <Form />
         </body>
       </html>

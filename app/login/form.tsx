@@ -2,6 +2,8 @@
 import { signIn } from "next-auth/react";
 import { FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export default function Form() {
   const router = useRouter();
@@ -21,15 +23,20 @@ export default function Form() {
     }
   }
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2 mt-10">
-      <input
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-5">
+      <Input
+        className="w-[200px]"
         type="username"
         name="username"
-        placeholder="username"
-        className="border border-black p-2"
+        placeholder="Username"
       />
-      <input type="password" name="password" placeholder="password" />
-      <button type="submit">Logga in</button>
+      <Input
+        className="w-[200px]"
+        type="password"
+        name="password"
+        placeholder="Password"
+      />
+      <Button type="submit">Logga in</Button>
     </form>
   );
 }
