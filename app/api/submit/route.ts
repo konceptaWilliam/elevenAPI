@@ -123,15 +123,12 @@ export async function createAudioFileFromText(
 }
 
 function sanitizeFileStem(text: string) {
-  // Replace å, ä, ö with a and o for filename only
+  // Keep Unicode letters/numbers (including Swedish letters) in filenames.
   const stem = text
     .trim()
     .toLowerCase()
-    .replace(/å/g, "a")
-    .replace(/ä/g, "a")
-    .replace(/ö/g, "o")
     .replace(/\s+/g, "-")
-    .replace(/[^a-zA-Z0-9-_]/g, "");
+    .replace(/[^\p{L}\p{N}_-]/gu, "");
 
   if (!stem) {
     return "audio";

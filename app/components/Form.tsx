@@ -72,7 +72,7 @@ export default function Form() {
 
   async function chooseDirectory() {
     if (!("showDirectoryPicker" in window)) {
-      setResultMessage("Din webblasare stodjer inte mappval.");
+      setResultMessage("Din webbläsare stodjer inte mappval.");
       return;
     }
 
@@ -86,7 +86,7 @@ export default function Form() {
       setSelectedDirectoryName(handle.name);
       setResultMessage("");
     } catch {
-      setResultMessage("Mappval avbrots.");
+      setResultMessage("Mappval avbröts.");
     }
   }
 
