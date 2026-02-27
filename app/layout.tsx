@@ -1,33 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { getServerSession } from "next-auth";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import Providers from "./providers";
+import Form from "./login/form";
 
 export const metadata: Metadata = {
   title: "Tryggve och Joys Röstverkstad",
   description: "Här skapar vi röster till Tryggve och Joy",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getServerSession();
+
+  if (!session) {
+    return (
+      <html lang="en">
+        <body>
+          <h1>Not signed in</h1>
+          <Form />
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
+      <body>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
